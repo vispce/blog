@@ -498,6 +498,30 @@ if ($current_collection) $filter_title = '专题：' . $current_collection['titl
             padding-top: 4px;
         }
         .dark .article-no { color: #333; }
+
+        /* ---- hero 简介文字渐变特效（zyyo/text.html）----
+           ① 铺一层渐变背景
+           ② background-clip: text 把背景裁剪成文字形状
+           ③ 文字填充色透明，渐变透出来
+           ④ 背景拉宽到 200%，配合动画让渐变流动
+        */
+        .hp-bio-gradient {
+            background-image: linear-gradient(120deg, #bd34fe, #e0321b 30%, #41d1ff 60%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent !important;
+            color: transparent;
+            background-size: 200%;
+            background-position: 0%;
+            animation: hp-bio-flow 10s ease-in-out infinite;
+        }
+        @keyframes hp-bio-flow {
+            0%   { background-position: 100%; }
+            25%  { background-position: 50%; }
+            50%  { background-position: 0%; }
+            75%  { background-position: 50%; }
+            100% { background-position: 100%; }
+        }
     </style>
 </head>
 <body class="selection:bg-zinc-100">
@@ -1008,7 +1032,7 @@ html.dark { background-color: transparent !important; }
             <!-- 姓名 -->
             <h1 class="serif-cn text-2xl md:text-3xl font-medium mb-4 <?= $hero_has_bg ? 'text-white hp-bg-text-white' : 'text-[#1a1a1a]' ?>"><?= h($hp_name) ?></h1>
             <!-- 简介 -->
-            <p class="text-sm font-light max-w-sm leading-relaxed mb-6 <?= $hero_has_bg ? 'text-white/70 hp-bg-text-white-70' : 'text-zinc-500' ?>">
+            <p class="hp-bio-gradient text-sm font-light max-w-sm leading-relaxed mb-6 <?= $hero_has_bg ? 'text-white/70 hp-bg-text-white-70' : 'text-zinc-500' ?>">
                 <?= $hp_bio ?>
             </p>
             <!-- 音乐播放器（内嵌，社交图标上方） -->
