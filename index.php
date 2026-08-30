@@ -929,6 +929,8 @@ html.dark { background-color: transparent !important; }
     $hp_bg_blur = intval($ss('homepage_bg_blur', '0'));
     $hp_bg_position = $ss('homepage_bg_position', 'center');
     $hp_bg_mobile_enabled = $ss('homepage_bg_mobile_enabled', '0') === '1';
+    // 主页背景网格渐变特效（默认关闭）
+    $hp_bg_grid_enabled = $ss('homepage_bg_grid_enabled', '0') === '1';
     // 全局背景图启用时，压制主页背景图（全局背景已在固定层渲染，避免重复）
     if ($gb_enabled) { $hp_bg_url = ''; }
     // hero 文字白色判断：主页背景图 或 全局背景图 任一有效时均用白色
@@ -1013,12 +1015,160 @@ html.dark { background-color: transparent !important; }
     </style>
     <?php endif; ?>
 
+    <?php if ($hp_bg_grid_enabled): ?>
+    <style>
+    /* 主页背景网格渐变特效：细网格线从顶部向下逐渐淡出 */
+    .hp-grid-layer {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background-image:
+            linear-gradient(rgba(24,24,27,.07) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(24,24,27,.07) 1px, transparent 1px);
+        background-size: 56px 56px;
+        -webkit-mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, #000 25%, transparent 78%);
+        mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, #000 25%, transparent 78%);
+    }
+    html.dark .hp-grid-layer {
+        background-image:
+            linear-gradient(rgba(255,255,255,.09) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,.09) 1px, transparent 1px);
+    }
+    /* 有背景图时：白线叠加在图片上 */
+    .hp-grid-layer.hp-grid-on-bg {
+        background-image:
+            linear-gradient(rgba(255,255,255,.14) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,.14) 1px, transparent 1px);
+    }
+    /* 下半部分：平时无网格，hover 时鼠标周围一圈网格边框点亮，JS 平滑跟随、有拖尾感，离开后缓缓淡出 */
+    .hp-grid-glow {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 280px; /* 覆盖 5×5 格，中心跟随鼠标 */
+        height: 280px;
+        background-image:
+            linear-gradient(rgba(24, 24, 27, .13) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(24, 24, 27, .13) 1px, transparent 1px);
+        background-size: 56px 56px;
+        -webkit-mask-image: radial-gradient(circle closest-side, #000 35%, rgba(0,0,0,.6) 60%, transparent 85%);
+        mask-image: radial-gradient(circle closest-side, #000 35%, rgba(0,0,0,.6) 60%, transparent 85%);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity .6s ease; /* 位移由 rAF 逐帧平滑处理，不走 CSS 过渡 */
+        will-change: transform, opacity;
+    }
+    html.dark .hp-grid-glow {
+        background-image:
+            linear-gradient(rgba(255, 255, 255, .16) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, .16) 1px, transparent 1px);
+    }
+    .hp-grid-glow.hp-grid-on-bg {
+        background-image:
+            linear-gradient(rgba(255, 255, 255, .22) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, .22) 1px, transparent 1px);
+    }
+    .hp-grid-glow.show {
+        opacity: 1;
+        transition: opacity .25s ease;
+    }
+    </style>
+    <script>
+    // 网格 hover 交互：下半部分被 hover 时，鼠标周围一圈网格边框点亮，rAF 逐帧平滑跟随（不卡顿、有拖尾感），离开后缓缓淡出
+    (function () {
+      function init() {
+        var header = document.getElementById('site-header');
+        var glow = document.querySelector('.hp-grid-glow');
+        if (!header || !glow) return;
+
+        var CELL = 56;
+        var HALF = 140;       // 光晕 5×5 = 280px，半径一半
+        var LOWER_ZONE = 0.4; // header 高度 40% 以下视为"下部分"
+
+        var targetX = 0, targetY = 0; // 鼠标目标位置
+        var posX = 0, posY = 0;       // 光晕实际位置（逐帧插值）
+        var visible = false;
+        var rafId = null;
+
+        function render() {
+          var lx = Math.round(posX - HALF);
+          var ly = Math.round(posY - HALF);
+          glow.style.transform = 'translate3d(' + lx + 'px,' + ly + 'px,0)';
+          // 光晕位置不一定是 56 的倍数：用 background-position 抵消余数，保证网格线与全局网格对齐
+          var bx = -(((lx % CELL) + CELL) % CELL);
+          var by = -(((ly % CELL) + CELL) % CELL);
+          glow.style.backgroundPosition = bx + 'px ' + by + 'px';
+        }
+
+        function tick() {
+          // 指数平滑：每帧向目标靠近一步，越近越慢——移动快时自然拖出一条尾巴
+          posX += (targetX - posX) * 0.14;
+          posY += (targetY - posY) * 0.14;
+          render();
+          var settled = Math.abs(targetX - posX) < 0.4 && Math.abs(targetY - posY) < 0.4;
+          if (visible && !settled) {
+            rafId = requestAnimationFrame(tick);
+          } else {
+            rafId = null;
+          }
+        }
+
+        function show(x, y) {
+          targetX = x;
+          targetY = y;
+          if (!visible) {
+            // 首次出现直接落在鼠标处，不做飞入动画
+            visible = true;
+            posX = x;
+            posY = y;
+            render();
+            glow.classList.add('show');
+          }
+          if (!rafId) rafId = requestAnimationFrame(tick);
+        }
+
+        function hide() {
+          if (!visible) return;
+          visible = false;
+          rafId = null;
+          glow.classList.remove('show');
+        }
+
+        header.addEventListener('mousemove', function (e) {
+          var rect = header.getBoundingClientRect();
+          var x = e.clientX - rect.left;
+          var y = e.clientY - rect.top;
+          // 上半部分不响应，保持静态网格
+          if (y > rect.height * LOWER_ZONE) {
+            show(x, y);
+          } else {
+            hide();
+          }
+        });
+
+        header.addEventListener('mouseleave', hide);
+      }
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
+    })();
+    </script>
+    <?php endif; ?>
+
     <header id="site-header" class="<?= ($page > 1 || $is_filtered) ? 'hidden' : 'min-h-screen flex items-center justify-center' ?> px-6 relative overflow-hidden <?= $header_extra_classes ?>">
         <?php if ($hp_bg_url): ?>
         <!-- 背景图层（独立 div，移动端可通过 CSS 隐藏） -->
         <div class="hp-bg-layer absolute inset-0" style="background-image:url(<?= h($hp_bg_url) ?>);background-size:cover;background-position:<?= h($hp_bg_position) ?><?= $hp_bg_blur > 0 ? ';filter:blur(' . $hp_bg_blur . 'px);transform:scale(1.05)' : '' ?>"></div>
         <!-- 遮罩层 -->
         <div class="hp-bg-overlay absolute inset-0 bg-black" style="opacity:<?= round($hp_bg_opacity / 100, 2) ?>"></div>
+        <?php endif; ?>
+        <?php if ($hp_bg_grid_enabled): ?>
+        <!-- 网格渐变特效层（上半部分常显，下半部分渐隐） -->
+        <div class="hp-grid-layer<?= !empty($hp_bg_url) ? ' hp-grid-on-bg' : '' ?>" aria-hidden="true"></div>
+        <!-- 下半部分 hover 光晕：鼠标周围的网格边框点亮，向外渐隐 -->
+        <div class="hp-grid-glow<?= !empty($hp_bg_url) ? ' hp-grid-on-bg' : '' ?>" aria-hidden="true"></div>
         <?php endif; ?>
         <div class="flex flex-col items-center text-center reveal relative z-10">
             <!-- 头像 -->

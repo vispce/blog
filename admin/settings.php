@@ -137,7 +137,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'site_theme_name', 'site_favicon_url',
         'homepage_avatar', 'homepage_name', 'homepage_bio',
         'homepage_bg_url', 'homepage_bg_opacity', 'homepage_bg_blur', 'homepage_bg_position',
-        'homepage_bg_mobile_enabled',
+        'homepage_bg_mobile_enabled', 'homepage_bg_grid_enabled',
         'homepage_avatar_no_frame',
         'wechat_qr_url',
         'social_github', 'social_youtube', 'social_bilibili',
@@ -157,7 +157,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ];
     $stmt = $pdo->prepare("INSERT INTO site_settings (`key`,`value`) VALUES (?,?)
                            ON DUPLICATE KEY UPDATE `value`=VALUES(`value`)");
-    $checkbox_fields = ['homepage_bg_mobile_enabled', 'homepage_avatar_no_frame', 'homepage_music_player_enabled', 'smtp_enabled'];
+    $checkbox_fields = ['homepage_bg_mobile_enabled', 'homepage_bg_grid_enabled', 'homepage_avatar_no_frame', 'homepage_music_player_enabled', 'smtp_enabled'];
     foreach ($fields as $k) {
         if (in_array($k, $checkbox_fields)) {
             // hidden+checkbox 组合：hidden 始终提交，需判断值是否为 '1'
@@ -815,6 +815,22 @@ require '_layout.php';
         <p class="mt-1 text-[10px] text-zinc-400">默认关闭，移动端将使用纯白/深色背景，节省流量并提升阅读体验。</p>
       </div>
 
+      <!-- 网格渐变特效 -->
+      <div>
+        <label class="block text-[10px] text-zinc-400 mb-1.5 uppercase tracking-wider">网格渐变特效</label>
+        <div class="flex items-center gap-3">
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="hidden" name="homepage_bg_grid_enabled" value="0">
+            <input type="checkbox" name="homepage_bg_grid_enabled" value="1"
+                   <?= ($s['homepage_bg_grid_enabled'] ?? '0') === '1' ? 'checked' : '' ?>
+                   class="sr-only peer">
+            <div class="w-9 h-5 bg-zinc-200 rounded-full peer peer-checked:bg-zinc-700 transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:w-4 after:h-4 after:bg-white after:rounded-full after:transition-all peer-checked:after:translate-x-4"></div>
+          </label>
+          <span class="text-xs text-zinc-600">开启主页背景网格渐变特效</span>
+        </div>
+        <p class="mt-1 text-[10px] text-zinc-400">在首页顶部叠加一层细网格线，从顶部向下逐渐淡出，亮色 / 深色模式自动适配。默认关闭。</p>
+      </div>
+
       <!-- 背景图预览 -->
       <div id="hpBgPreviewWrap" class="<?= empty($s['homepage_bg_url']) ? 'hidden' : '' ?>">
         <p class="text-[10px] text-zinc-400 mb-2 uppercase tracking-wider">预览（含遮罩效果）</p>
@@ -825,6 +841,9 @@ require '_layout.php';
           <div id="hpBgOverlay"
                class="absolute inset-0 bg-black"
                style="opacity:<?= round(intval($s['homepage_bg_opacity'] ?? 30) / 100, 2) ?>"></div>
+          <div id="hpBgGridPreview"
+               class="absolute inset-0 pointer-events-none <?= ($s['homepage_bg_grid_enabled'] ?? '0') === '1' ? '' : 'hidden' ?>"
+               style="background-image:linear-gradient(rgba(255,255,255,.15) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.15) 1px,transparent 1px);background-size:20px 20px;-webkit-mask-image:radial-gradient(ellipse 90% 70% at 50% 0%,#000 25%,transparent 85%);mask-image:radial-gradient(ellipse 90% 70% at 50% 0%,#000 25%,transparent 85%)"></div>
           <div class="absolute inset-0 flex flex-col items-center justify-center text-white space-y-1 pointer-events-none">
             <div class="w-10 h-10 rounded-full bg-white/20 border border-white/30"></div>
             <p class="text-xs font-medium">姓名预览</p>
@@ -985,6 +1004,15 @@ function updateBgPosition(val) {
   const checked = document.querySelector('input[name="homepage_bg_position"]:checked');
   if (checked) hpBgPreview.style.objectPosition = checked.value;
 })();
+
+// ---- 网格渐变特效实时预览 ----
+const hpGridToggle  = document.querySelector('input[name="homepage_bg_grid_enabled"]');
+const hpGridPreview = document.getElementById('hpBgGridPreview');
+if (hpGridToggle && hpGridPreview) {
+  hpGridToggle.addEventListener('change', function() {
+    hpGridPreview.classList.toggle('hidden', !this.checked);
+  });
+}
 
 // ---- 网站图标（Favicon）实时预览 ----
 const faviconInput   = document.getElementById('faviconInput');
