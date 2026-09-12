@@ -205,4 +205,4 @@ email/vendor/
 ```
 
 ## 项目地址
-[昨夜书](https://blog.catvb.com "参观博客")
+[昨夜书](https://catvb.com "参观博客")
