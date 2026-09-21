@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS posts (
 -- 初始数据
 -- =========================================
 
--- 默认管理员：admin / picker2026
+-- 默认管理员：admin / password
 INSERT INTO admins (username, password) VALUES
 ('admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi');  -- 默认密码: password
 
