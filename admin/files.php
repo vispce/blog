@@ -96,14 +96,20 @@ function upload_err_msg(int $code): string {
     return $map[$code] ?? ('未知错误（code=' . $code . '）');
 }
 
-// 新建文件夹
+// 新建文件夹（成功静默，失败提示错误）
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['mkdir'])) {
     $dir  = is_dir($target) ? $target : $base_dir;
     $name = preg_replace('/[^\w\-]/u', '_', trim($_POST['mkdir']));
-    if ($name) {
+    $msg  = '';
+    if (!$name) {
+        $msg = '创建失败：文件夹名不合法';
+    } else {
         $np = $dir . DIRECTORY_SEPARATOR . $name;
-        if (!is_dir($np)) mkdir($np, 0755);
-        $msg = '文件夹已创建';
+        if (is_dir($np)) {
+            $msg = '创建失败：文件夹已存在';
+        } elseif (!@mkdir($np, 0755)) {
+            $msg = '创建失败：无法写入目录（' . $name . '）';
+        }
     }
     header('Location: files.php?path=' . urlencode($rel) . '&msg=' . urlencode($msg)); exit;
 }
