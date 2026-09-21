@@ -12,9 +12,9 @@ unset($_d);
 
 define('DB_HOST', 'localhost');
 define('DB_PORT', '3306');
-define('DB_NAME', 'name');          // 改为你的数据库名
-define('DB_USER', 'user');          // 改为你的数据库用户名
-define('DB_PASS', 'pass');          // 改为你的数据库密码
+define('DB_NAME', 'blog');          // 改为你的数据库名
+define('DB_USER', 'root');          // 改为你的数据库用户名
+define('DB_PASS', 'password');          // 改为你的数据库密码
 define('DB_CHARSET', 'utf8mb4');
 
 /**

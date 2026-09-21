@@ -52,11 +52,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
     exit;
 }
 
-// 上传文件
+// 上传文件（AJAX）：成功静默返回 200，失败返回 400 + 错误详情
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['upload'])) {
-    $dir = is_dir($target) ? $target : $base_dir;
+    $dir    = is_dir($target) ? $target : $base_dir;
+    $errors = [];
     foreach ($_FILES['upload']['name'] as $i => $name) {
-        if ($_FILES['upload']['error'][$i] !== UPLOAD_ERR_OK) continue;
+        $code = $_FILES['upload']['error'][$i] ?? UPLOAD_ERR_NO_FILE;
+        if ($code !== UPLOAD_ERR_OK) {
+            $errors[] = basename($name) . '：' . upload_err_msg($code);
+            continue;
+        }
         $safe = preg_replace('/[^\w.\-]/u', '_', basename($name));
         $dest = $dir . DIRECTORY_SEPARATOR . $safe;
         // 避免覆盖
@@ -65,10 +70,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['upload'])) {
             $safe = $info['filename'] . '_' . time() . '.' . ($info['extension'] ?? 'bin');
             $dest = $dir . DIRECTORY_SEPARATOR . $safe;
         }
-        move_uploaded_file($_FILES['upload']['tmp_name'][$i], $dest);
+        if (!move_uploaded_file($_FILES['upload']['tmp_name'][$i], $dest)) {
+            $errors[] = basename($name) . '：保存失败，请检查服务器 uploads 目录写权限';
+        }
     }
-    $msg = '上传成功';
-    header('Location: files.php?path=' . urlencode($rel) . '&msg=' . urlencode($msg)); exit;
+    if ($errors) {
+        http_response_code(400);
+        echo implode("\n", $errors);
+    } else {
+        echo 'OK';
+    }
+    exit;
+}
+
+function upload_err_msg(int $code): string {
+    $map = [
+        UPLOAD_ERR_INI_SIZE   => '文件超过服务器 upload_max_filesize 限制',
+        UPLOAD_ERR_FORM_SIZE  => '文件超过表单大小限制',
+        UPLOAD_ERR_PARTIAL    => '文件只上传了一部分（网络中断？）',
+        UPLOAD_ERR_NO_FILE    => '未收到文件内容',
+        UPLOAD_ERR_NO_TMP_DIR => '服务器临时目录缺失',
+        UPLOAD_ERR_CANT_WRITE => '服务器无法写入临时文件',
+        UPLOAD_ERR_EXTENSION  => 'PHP 扩展中止了上传',
+    ];
+    return $map[$code] ?? ('未知错误（code=' . $code . '）');
 }
 
 // 新建文件夹
@@ -539,7 +564,7 @@ function startUpload(files) {
         <div id="${id}_bar" class="h-full bg-zinc-400 transition-all duration-100" style="width:0%"></div>
       </div>`;
     fileList.appendChild(row);
-    return { file, id };
+    return { file, id, row };
   });
 
   let doneCount = 0;
@@ -548,7 +573,7 @@ function startUpload(files) {
   statusTx.textContent = `0 / ${files.length} 个文件`;
 
   let chain = Promise.resolve();
-  rows.forEach(({ file, id }) => {
+  rows.forEach(({ file, id, row }) => {
     const fileKey = file.name + file.size;
     chain = chain.then(() => uploadOne(file, id, (loaded) => {
       const pct = Math.round(loaded / file.size * 100);
@@ -568,9 +593,13 @@ function startUpload(files) {
         statusTx.textContent = `全部完成，刷新中…`;
         setTimeout(() => location.reload(), 600);
       }
-    }).catch(() => {
+    }).catch((e) => {
       document.getElementById(id + '_bar').style.background = '#ef4444';
       document.getElementById(id + '_pct').textContent = '失败';
+      const errEl = document.createElement('div');
+      errEl.className = 'text-[11px] text-red-500';
+      errEl.textContent = (e && e.message) ? e.message : '上传失败';
+      row.appendChild(errEl);
     });
   });
 }
@@ -584,7 +613,14 @@ function uploadOne(file, id, onProgress) {
     xhr.upload.addEventListener('progress', e => {
       if (e.lengthComputable) onProgress(e.loaded);
     });
-    xhr.addEventListener('load',  () => { onProgress(file.size); resolve(); });
+    xhr.addEventListener('load', () => {
+      if (xhr.status >= 200 && xhr.status < 400) {
+        onProgress(file.size);
+        resolve();
+      } else {
+        reject(new Error((xhr.responseText || '').trim() || ('上传失败 (HTTP ' + xhr.status + ')')));
+      }
+    });
     xhr.addEventListener('error', () => reject(new Error('网络错误')));
     xhr.send(fd);
   });

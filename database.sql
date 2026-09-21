@@ -65,22 +65,6 @@ CREATE TABLE IF NOT EXISTS posts (
 INSERT INTO admins (username, password) VALUES
 ('admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi');  -- 默认密码: password
 
--- 分类
-INSERT INTO categories (name, slug, sort_order) VALUES
-('设计思考', 'design',       1),
-('独立开发', 'indie-dev',    2),
-('摄影随笔', 'photography',  3),
-('极简生活', 'minimal-life', 4);
-
--- 专题
-INSERT INTO collections (title, description, cover_url, sort_order) VALUES
-('斯堪的纳维亚美学', '从光影处理到材质选择的极简主义艺术...',
- 'https://images.unsplash.com/photo-1516724562728-afc824a36e84?auto=format&fit=crop&q=80&w=800', 1),
-('独立开发者周记', '记录构建产品过程中的感悟与取舍...',
- 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&q=80&w=800', 2),
-('日常摄影集', '用镜头捕捉城市角落里的静谧瞬间...',
- 'https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?auto=format&fit=crop&q=80&w=800', 3);
-
 
 -- -----------------------------------------
 -- 友情链接表
