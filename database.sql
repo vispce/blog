@@ -105,13 +105,13 @@ CREATE TABLE IF NOT EXISTS site_settings (
 INSERT INTO site_settings (`key`, `value`) VALUES
 ('homepage_avatar',  '')
 ,('homepage_name',   'Jeremy Bentham')
-,('homepage_bio',    '保持理想，步履不停。')
+,('homepage_bio',    '保持理想，步履不停')
 ,('wechat_qr_url',   '')
-,('social_github',  'https://github.com/vispce-png')
+,('social_github',  'https://github.com/vispce')
 ,('social_youtube', 'https://www.youtube.com/@JacocI')
 ,('social_bilibili','https://space.bilibili.com/3493299151177900')
 ,('social_twitter', '')
 ,('social_instagram','')
-,('about_quote',    '保持理想，步履不停。')
-,('about_email',    'vispce@gmail.com')
+,('about_quote',    '保持理想，步履不停')
+,('about_email',    'example@gmail.com')
 ON DUPLICATE KEY UPDATE `key`=`key`;
